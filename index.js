@@ -218,7 +218,7 @@ var Validator = klass.create({
                     });
                 } else {
                     the._ruleList.push(rule);
-                    the._ruleNames[rule.name] = true;
+                    the._ruleNames[rule.name] = rule;
                 }
             } else {
                 throw '`' + rule.name + '`的验证规则已经存在，不能重复添加，欲覆盖请传入第2个参数`isOverride`。';
