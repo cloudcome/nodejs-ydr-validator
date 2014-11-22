@@ -1,0 +1,33 @@
+{
+  "name": "ydr-validator",
+  "version": "1.0.0",
+  "private": false,
+  "description": "validator for ydr.me",
+  "scripts": {},
+  "preferGlobal": false,
+  "bin": {},
+  "main": "index.js",
+  "keywords": [
+    "cloudcome",
+    "keywords"
+  ],
+  "author": {
+    "name": "cloudcome",
+    "email": "cloudcome@163.com",
+    "url": "http://ydr.me"
+  },
+  "homepage": "https://github.com/cloudcome/nodejs-ydr-validator",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cloudcome/nodejs-ydr-validator"
+  },
+  "bugs": {
+    "url": "https://github.com/cloudcome/nodejs-ydr-validator/issues"
+  },
+  "dependencies": {
+    "howdo": "*",
+    "ydr-util": "*"
+  },
+  "devDependencies": {},
+  "licenses": "MIT"
+}
