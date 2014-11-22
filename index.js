@@ -29,6 +29,7 @@ var Validator = klass.create({
         the._ruleList = [];
         // 已经存在的验证规则
         the._ruleNames = {};
+        the.rules = {};
         // 选项
         the._options = dato.extend(true, {}, defaults, options);
     },
@@ -214,11 +215,13 @@ var Validator = klass.create({
                     the._ruleList.forEach(function (existRule) {
                         if (rule.name === existRule.name) {
                             dato.extend(true, existRule, rule);
+                            the.rules[rule.name] = existRule;
                         }
                     });
                 } else {
                     the._ruleList.push(rule);
-                    the._ruleNames[rule.name] = rule;
+                    the._ruleNames[rule.name] = true;
+                    the.rules[rule.name] = rule;
                 }
             } else {
                 throw '`' + rule.name + '`的验证规则已经存在，不能重复添加，欲覆盖请传入第2个参数`isOverride`。';
@@ -261,7 +264,7 @@ var Validator = klass.create({
             var errs = null;
 
             if (isBreakOnInvalid) {
-                return callback(err, data);
+                return callback.call(the, err, data);
             }
 
             dato.each(the._ruleList, function (index, rule) {
@@ -271,7 +274,7 @@ var Validator = klass.create({
                 }
             });
 
-            callback(errs, data);
+            callback.call(the, errs, data);
         });
     },
 
