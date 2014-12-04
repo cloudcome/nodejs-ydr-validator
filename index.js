@@ -16,7 +16,6 @@ var noop = function () {
 };
 var udf;
 var defaults = {
-    // 是否在遇到非法就中断，默认 false
     // true: 返回单个错误对象
     // false: 返回错误对象组成的数组
     // 浏览器端，默认为 false
