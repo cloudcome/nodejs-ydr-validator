@@ -1,6 +1,6 @@
 {
   "name": "ydr-validator",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": false,
   "description": "validator for ydr.me",
   "scripts": {},
@@ -9,7 +9,12 @@
   "main": "index.js",
   "keywords": [
     "cloudcome",
-    "keywords"
+    "validator",
+    "form",
+    "node",
+    "browser",
+    "alien",
+    "ydr.me"
   ],
   "author": {
     "name": "cloudcome",
@@ -25,8 +30,8 @@
     "url": "https://github.com/cloudcome/nodejs-ydr-validator/issues"
   },
   "dependencies": {
-    "howdo": "*",
-    "ydr-util": "*"
+    "howdo": "^1.1.4",
+    "ydr-util": "^1.10.9"
   },
   "devDependencies": {},
   "licenses": "MIT"

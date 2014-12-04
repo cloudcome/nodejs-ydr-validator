@@ -6,6 +6,8 @@ validator for ydr.me
 ```
 npm install -S ydr-validator
 ```
+browser 端使用__[alien/libs/Validator](https://github.com/cloudcome/alien/blob/master/src/libs/Validator.js)__，
+API全部一致，因此可以通用。
 
 
 # API
@@ -13,10 +15,12 @@ npm install -S ydr-validator
 ## options
 ```
 {
-    // 是否在遇到非法就中断，默认false
+    // 是否在遇到非法就中断，默认 false
     // true: 返回单个错误对象
     // false: 返回错误对象组成的数组
-    isBreakOnInvalid: false
+    // 浏览器端，默认为 false
+    // 服务器端，默认为 true
+    isBreakOnInvalid: true
 }
 ```
 
