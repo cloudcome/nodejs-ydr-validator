@@ -2,6 +2,7 @@
  * 数据验证
  * @author ydr.me
  * @create 2014-11-22 14:58
+ * @update 2014-12-16 20:22:36
  */
 
 'use strict';
@@ -11,8 +12,9 @@ var klass = ydrUtil.class;
 var dato = ydrUtil.dato;
 var typeis = ydrUtil.typeis;
 var howdo = require('howdo');
-var types = 'string,number,email,url,boolean'.split(',');
+var types = 'string,number,email,url,boolean,array'.split(',');
 var noop = function () {
+    // ignore
 };
 var udf;
 var defaults = {
@@ -65,7 +67,7 @@ var Validator = klass.create({
      * validator.pushRule({
      *    // 字段名称，必须，唯一性
      *    name: 'username',
-     *    // 数据类型，必须，为 string/email/url/number/boolean 之一
+     *    // 数据类型，必须，为 string/email/url/number/boolean/array 之一
      *    type: 'string',
      *    // 别称，当没有填写自定义错误消息时
      *    // 提示为 username不能为空
@@ -131,104 +133,51 @@ var Validator = klass.create({
      */
     pushRule: function (rule, isOverride) {
         var the = this;
-        var ruleType = typeis(rule);
 
-        if (ruleType === 'object' && rule.name && typeis(rule.name) === 'string') {
-            if (!the._ruleNames[rule.name] || isOverride) {
-                // 是否存在并且覆盖
-                var isExistAndIsOverride = the._ruleNames[rule.name] && isOverride;
+        if (!the._ruleNames[rule.name] || isOverride) {
+            // 是否存在并且覆盖
+            var isExistAndIsOverride = the._ruleNames[rule.name] && isOverride;
 
-                if (!rule.type || types.indexOf(rule.type) === -1) {
-                    throw '`rule.type`必须指定，且必须是“' + types.join('、') + '”其一';
-                }
+            if (!rule.type || types.indexOf(rule.type) === -1) {
+                throw '`rule.type` must be one of [' + types.join('/') + ']';
+            }
 
-                if (!rule.msg) {
-                    rule.msg = {};
-                }
+            if (!rule.msg) {
+                rule.msg = {};
+            }
 
-                if (!rule.alias) {
-                    rule.alias = rule.name;
-                }
+            if (!rule.alias) {
+                rule.alias = rule.name;
+            }
 
-                rule.required = !!rule.required;
+            rule.required = !!rule.required;
 
-                if (rule.exist === udf) {
-                    rule.exist = false;
-                }
+            if (rule.exist === udf) {
+                rule.exist = false;
+            }
 
-                rule.exist = !!rule.exist;
+            rule.exist = !!rule.exist;
 
-                if (rule.trim === udf) {
-                    rule.trim = true;
-                }
+            if (rule.trim === udf) {
+                rule.trim = true;
+            }
 
-                rule.trim = !!rule.trim;
+            rule.trim = !!rule.trim;
 
-                if (rule.length && typeis(rule.length) !== 'number') {
-                    throw '`rule.length`规则必须是数值类型';
-                }
-
-                if (rule.minLength && typeis(rule.minLength) !== 'number') {
-                    throw '`rule.minLength`规则必须是数值类型';
-                }
-
-                if (rule.maxLength && typeis(rule.maxLength) !== 'number') {
-                    throw '`rule.maxLength`规则必须是数值类型';
-                }
-
-                if (rule.bytes && typeis(rule.bytes) !== 'number') {
-                    throw '`rule.bytes`规则必须是数值类型';
-                }
-
-                if (rule.minBytes && typeis(rule.minBytes) !== 'number') {
-                    throw '`rule.minBytes`规则必须是数值类型';
-                }
-
-                if (rule.maxBytes && typeis(rule.maxBytes) !== 'number') {
-                    throw '`rule.maxBytes`规则必须是数值类型';
-                }
-
-                if (rule.min && typeis(rule.min) !== 'number') {
-                    throw '`rule.min`规则必须是数值类型';
-                }
-
-                if (rule.max && typeis(rule.max) !== 'number') {
-                    throw '`rule.max`规则必须是数值类型';
-                }
-
-                if (rule.regexp && typeis(rule.regexp) !== 'regexp') {
-                    throw '`rule.regexp`必须是正则表达式';
-                }
-
-                if (rule.function && typeis(rule.function) !== 'function') {
-                    throw '`rule.function`规则必须是回调函数';
-                }
-
-                if (rule.function && rule.function.length !== 2) {
-                    throw '`rule.function`函数必须有2个形参';
-                }
-
-                if (rule.inArray && typeis(rule.inArray) !== 'array') {
-                    throw '`rule.inArray`规则必须是数组';
-                }
-
-                if (isExistAndIsOverride) {
-                    the._ruleList.forEach(function (existRule) {
-                        if (rule.name === existRule.name) {
-                            dato.extend(true, existRule, rule);
-                            the.rules[rule.name] = existRule;
-                        }
-                    });
-                } else {
-                    the._ruleList.push(rule);
-                    the._ruleNames[rule.name] = true;
-                    the.rules[rule.name] = rule;
-                }
+            if (isExistAndIsOverride) {
+                the._ruleList.forEach(function (existRule) {
+                    if (rule.name === existRule.name) {
+                        dato.extend(true, existRule, rule);
+                        the.rules[rule.name] = existRule;
+                    }
+                });
             } else {
-                throw '`' + rule.name + '`的验证规则已经存在，不能重复添加，欲覆盖请传入第2个参数`isOverride`。';
+                the._ruleList.push(rule);
+                the._ruleNames[rule.name] = true;
+                the.rules[rule.name] = rule;
             }
         } else {
-            throw '验证规则必须是对象，且对象必须包含`name`值。';
+            throw '`' + rule.name + '` is exist, use `isOverride` to override this rule';
         }
 
         return the;
@@ -306,7 +255,7 @@ var Validator = klass.create({
             } else {
                 callback(null, data);
             }
-        }else{
+        } else {
             callback(null, data);
         }
     },
@@ -519,7 +468,7 @@ var Validator = klass.create({
                 } else if (functionLength === 2) {
                     rule.function.call(window, val, over);
                 } else {
-                    throw '自定义函数包含3个参数`val`、[`data`]、`next`，`data`可选';
+                    throw 'arguments are `val,[data],next`';
                 }
             } else {
                 over();

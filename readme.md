@@ -30,7 +30,7 @@ var validator = new Validator(options);
 validator.pushRule({
    // 字段名称，必须，唯一性
    name: 'username',
-   // 数据类型，必须，为 string/email/url/number/boolean 之一
+   // 数据类型，必须，为 string/email/url/number/boolean/array 之一
    type: 'string',
    // 别称，当没有填写自定义错误消息时
    // 提示为 username不能为空
