@@ -315,13 +315,13 @@ var Validator = klass.create({
 
             if (findIndex > -1) {
                 the._validateOne(the._ruleList[findIndex], data, function (err, data) {
-                    callback(err, data[name]);
+                    callback(err, data[name], data);
                 });
             } else {
-                callback(null, data[name]);
+                callback(null, data[name], data);
             }
         } else {
-            callback(null, data[name]);
+            callback(null, data[name], dat);
         }
     },
 
