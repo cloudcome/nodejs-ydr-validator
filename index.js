@@ -7,10 +7,9 @@
 
 'use strict';
 
-var ydrUtil = require('ydr-util');
-var klass = ydrUtil.class;
-var dato = ydrUtil.dato;
-var typeis = ydrUtil.typeis;
+var klass = require('ydr-util').class;
+var dato = require('ydr-util').dato;
+var typeis = require('ydr-util').typeis;
 var howdo = require('howdo');
 var types = 'string,number,email,url,boolean,array'.split(',');
 var noop = function () {
@@ -25,17 +24,80 @@ var defaults = {
     isBreakOnInvalid: true
 };
 var Validator = klass.create({
-    STATIC: {},
+    STATIC: {
+        /**
+         * 注册自定义的静态验证规则
+         * @param options {Object} 规则配置
+         * @param fn {Function} 规则方法
+         * @param [isOverride=false] 是否覆盖已有规则
+         *
+         * @example
+         * // 添加一个检查后缀的自定义规则
+         * Validator.registerRule({
+         *     name: 'suffix',
+         *     type: 'array'
+         * }, function(suffix, val, next){
+         *     var sf = (val.match(/\.[^.]*$/) || [''])[0];
+         *     var boolean = suffix.indexOf(sf) > -1;
+         *
+         *     next(boolean ? null : new Error(this.alias + '的文件后缀不正确'), val);
+         * });
+         */
+        registerRule: function (options, fn, isOverride) {
+            if (!customRules[options.name] || customRules[options.name] && isOverride) {
+                customRules[options.name] = {
+                    name: options.name,
+                    type: options.type,
+                    fn: fn
+                };
+            }
+        }
+    },
+
+
     constructor: function (options) {
         var the = this;
         // 规则列表，有顺序之分
         the._ruleList = [];
         // 已经存在的验证规则
         the._ruleNames = {};
+        the._customRules = {};
         the.rules = {};
         // 选项
         the._options = dato.extend(true, {}, defaults, options);
     },
+
+
+    /**
+     * 注册自定义的实例验证规则
+     * @param options {Object} 规则配置
+     * @param fn {Function} 规则方法
+     * @param [isOverride=false] 是否覆盖已有规则
+     *
+     * @example
+     * // 添加一个检查后缀的自定义规则
+     * validator.registerRule({
+     *     name: 'suffix',
+     *     type: 'array'
+     * }, function(suffix, val, next){
+     *     var sf = (val.match(/\.[^.]*$/) || [''])[0];
+     *     var boolean = suffix.indexOf(sf) > -1;
+     *
+     *     next(boolean ? null : new Error(this.alias + '的文件后缀不正确'), val);
+     * });
+     */
+    registerRule: function (options, fn, isOverride) {
+        var the = this;
+
+        if (!the._customRules[options.name] || the._customRules[options.name] && isOverride) {
+            the._customRules[options.name] = {
+                name: options.name,
+                type: options.type,
+                fn: fn
+            };
+        }
+    },
+
 
     /**
      * 添加单个验证规则
@@ -199,7 +261,7 @@ var Validator = klass.create({
         callback = typeis(callback) === 'function' ? callback : noop;
 
         howdo.each(the._ruleList, function (key, rule, next) {
-            the._validate(rule, data, function (err) {
+            the._validateOne(rule, data, function (err) {
                 if (!isBreakOnInvalid) {
                     errList.push(err);
                 }
@@ -251,12 +313,14 @@ var Validator = klass.create({
             });
 
             if (findIndex > -1) {
-                the._validate(the._ruleList[findIndex], data, callback);
+                the._validateOne(the._ruleList[findIndex], data, function (err, data) {
+                    callback(err, data[name]);
+                });
             } else {
-                callback(null, data);
+                callback(null, data[name]);
             }
         } else {
-            callback(null, data);
+            callback(null, data[name]);
         }
     },
 
@@ -269,26 +333,62 @@ var Validator = klass.create({
      * @returns {*}
      * @private
      */
-    _validate: function (rule, data, callback) {
+    _validateOne: function (rule, data, callback) {
+        var the = this;
         var val = data[rule.name];
         var err;
         var type;
-        var over = function (err) {
-            // onafter
-            if (typeis(rule.onafter) === 'function' && !err) {
-                data[rule.name] = rule.onafter(val, data);
+        var onover = function (err) {
+            var ondone = function (err) {
+                // onafter
+                if (typeis(rule.onafter) === 'function' && !err) {
+                    data[rule.name] = rule.onafter.call(rule, val, data);
+                }
+
+                // callback
+                if (typeis(callback) === 'function') {
+                    callback(err, data);
+                }
+            };
+
+            if (err) {
+                return ondone(err);
             }
 
-            // callback
-            if (typeis(callback) === 'function') {
-                callback(err, data);
-            }
+            var runCustomRules = function (customRules) {
+                return function (callback) {
+                    howdo.each(customRules, function (ruleName, ruleInfo, next) {
+                        var _rule = rule[ruleName];
+
+                        if (typeis(_rule) !== ruleInfo.type) {
+                            return next();
+                        }
+
+                        ruleInfo.fn.call(rule, _rule, val, function (err) {
+                            if (!err) {
+                                return next();
+                            }
+
+                            err = rule.msg[ruleName] ? new Error(rule.msg[ruleName]) : err;
+                            next(err);
+                        });
+                    }).follow(callback);
+                };
+            };
+
+            howdo
+                // 静态自定义验证规则
+                .task(runCustomRules(customRules))
+                // 实例自定义验证规则
+                .task(runCustomRules(the._customRules))
+                // 异步串行
+                .follow(ondone);
         };
         var functionLength;
 
         // onbefore
         if (typeis(rule.onbefore) === 'function') {
-            data[rule.name] = val = rule.onbefore(val, data);
+            data[rule.name] = val = rule.onbefore.call(rule, val, data);
         }
 
         type = typeis(val);
@@ -313,7 +413,7 @@ var Validator = klass.create({
                 err = new Error(rule.msg.required || rule.alias + '不能为空');
 
                 if (!info.stringLength) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
@@ -325,110 +425,109 @@ var Validator = klass.create({
                 case 'email':
                 case 'url':
                     if (type !== 'string') {
-                        return over(err);
+                        return onover(err);
                     }
 
                     if (rule.type === 'email' && !typeis.email(val)) {
-                        return over(err);
+                        return onover(err);
                     }
 
                     if (rule.type === 'url' && !typeis.url(val)) {
-                        return over(err);
+                        return onover(err);
                     }
                     break;
 
                 default:
                     if (rule.type && type !== rule.type) {
-                        return over(err);
+                        return onover(err);
                     }
             }
 
             // length
-            if (rule.length && type === 'string') {
+            if (typeis.number(rule.length) && type === 'string') {
                 err = new Error(rule.msg.length || rule.alias + '长度必须为' + rule.length + '字符');
 
                 if (info.stringLength !== rule.length) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
             // bytes
-            if (rule.bytes && type === 'string') {
+            if (typeis.number(rule.bytes) && type === 'string') {
                 err = new Error(rule.msg.bytes || rule.alias + '长度必须为' + rule.bytes + '字节');
 
                 if (info.stringBytes !== rule.bytes) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
             // minLength
-            if (rule.minLength && type === 'string') {
+            if (typeis.number(rule.minLength) && type === 'string') {
                 err = new Error(rule.msg.minLength || rule.alias + '长度不能少于' + rule.minLength + '字符');
 
                 if (info.stringLength < rule.minLength) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
             // minBytes
-            if (rule.minBytes && type === 'string') {
+            if (typeis.number(rule.minBytes) && type === 'string') {
                 err = new Error(rule.msg.minBytes || rule.alias + '长度不能少于' + rule.minBytes + '字节');
 
                 if (info.stringBytes < rule.minBytes) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
-
             // maxLength
-            if (rule.maxLength && type === 'string') {
+            if (typeis.number(rule.maxLength) && type === 'string') {
                 err = new Error(rule.msg.maxLength || rule.alias + '长度不能超过' + rule.maxLength + '字符');
 
                 if (info.stringLength > rule.maxLength) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
             // maxBytes
-            if (rule.maxBytes && type === 'string') {
+            if (typeis.number(rule.maxBytes) && type === 'string') {
                 err = new Error(rule.msg.maxBytes || rule.alias + '长度不能超过' + rule.maxBytes + '字节');
 
                 if (info.stringBytes > rule.maxBytes) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
             // inArray
-            if (rule.inArray) {
+            if (typeis.array(rule.inArray)) {
                 err = new Error(rule.msg.inArray || rule.alias + '必须是“' + rule.inArray.join('、') + '”其一');
                 if (rule.inArray.indexOf(val) === -1) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
             // min
-            if (rule.min && type === 'number') {
+            if (typeis.number(rule.min) && type === 'number') {
                 err = new Error(rule.msg.min || rule.alias + '不能小于' + rule.min);
                 if (val < rule.min) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
             // max
-            if (rule.max && type === 'number') {
+            if (typeis.number(rule.max) && type === 'number') {
                 err = new Error(rule.msg.max || rule.alias + '不能大于' + rule.max);
 
                 if (val > rule.max) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
             // regexp
-            if (rule.regexp && type === 'string') {
+            if (typeis.regexp(rule.regexp) && type === 'string') {
                 err = new Error(rule.msg.regexp || rule.alias + '不符合规则');
 
                 if (!rule.regexp.test(val)) {
-                    return over(err);
+                    return onover(err);
                 }
             }
 
@@ -455,26 +554,27 @@ var Validator = klass.create({
                 err = new Error(rule.msg.equal || rule.alias + '必须是' + rule.equal);
 
                 if (!_isEqual(val, rule.equal)) {
-                    return over(err);
+                    return onover(err);
                 }
             }
+
 
             // function
             if (typeis(rule.function) === 'function') {
                 functionLength = rule.function.length;
 
                 if (functionLength === 3) {
-                    rule.function.call(window, val, data, over);
+                    rule.function.call(window, val, data, onover);
                 } else if (functionLength === 2) {
-                    rule.function.call(window, val, over);
+                    rule.function.call(window, val, onover);
                 } else {
                     throw 'arguments are `val,[data],next`';
                 }
             } else {
-                over();
+                onover();
             }
         } else {
-            over();
+            onover();
         }
     }
 });
