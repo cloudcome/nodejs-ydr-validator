@@ -15,6 +15,7 @@ var types = 'string,number,email,url,boolean,array'.split(',');
 var noop = function () {
     // ignore
 };
+var customRules = {};
 var udf;
 var defaults = {
     // true: 返回单个错误对象
