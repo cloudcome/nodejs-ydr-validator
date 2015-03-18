@@ -368,7 +368,7 @@ Validator.fn.validateOne = function (data, callback) {
                  * @param value {*} 字段值
                  */
                 the.emit('validateoneend', name, err, data[name]);
-                callback.call(the, err, data[name]);
+                callback.call(the, err, data[name], data);
             });
         } else {
             /**
@@ -379,7 +379,7 @@ Validator.fn.validateOne = function (data, callback) {
              * @param value {*} 字段值
              */
             the.emit('validateoneend', name, null, data[name]);
-            callback.call(the, null, data[name]);
+            callback.call(the, null, data[name], data);
         }
     } else {
         /**
@@ -397,7 +397,7 @@ Validator.fn.validateOne = function (data, callback) {
          * @param value {*} 字段值
          */
         the.emit('validateoneend', name, null, data[name]);
-        callback.call(the, null, data[name]);
+        callback.call(the, null, data[name], data);
     }
 };
 
