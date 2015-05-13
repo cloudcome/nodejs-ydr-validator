@@ -1,6 +1,6 @@
 {
   "name": "ydr-validator",
-  "version": "100.0.0",
+  "version": "101.0.0",
   "private": false,
   "description": "validator for ydr.me",
   "scripts": {},
